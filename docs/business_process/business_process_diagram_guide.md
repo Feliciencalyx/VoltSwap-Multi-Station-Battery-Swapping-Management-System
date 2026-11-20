@@ -1,4 +1,4 @@
-# Guide: Drawing the VoltSwap BPMN Swimlane Diagram in draw.io
+# Guide: Drawing the VoltSwap Electric Car BPMN Swimlane Diagram in draw.io
 
 > **CRITICAL ACADEMIC INTEGRITY NOTE (Final Exam Requirement):**  
 > The course guidelines explicitly state:
@@ -17,82 +17,82 @@ Follow this exact blueprint to draw your diagram in **draw.io** shape-by-shape i
 3. In the left shape library, select **BPMN** or **General / Advanced**.
 4. Drag a **Pool / Swimlane** shape onto the canvas.
 5. Create **5 Horizontal Swimlanes** and label them:
-   1. **Customer (Rider)**
-   2. **Station Attendant**
-   3. **System / Database Engine**
-   4. **Inspection Staff**
-   5. **Operations Manager**
+   1. **Electric Car Driver (Customer / Taxi Fleet)**
+   2. **Station Attendant / Bay Operator**
+   3. **System / Database Engine (Oracle PL/SQL)**
+   4. **High-Voltage Quality & Safety Technician**
+   5. **Operations & Fleet Manager**
 
 ---
 
 ## Step 2: Place Shapes & Connect Activities
 
-### Lane 1: Customer (Rider)
-* **Start Event (Green Circle):** *"Arrives at Swapping Station with Depleted Battery"*.
-* $\rightarrow$ **Activity (Rounded Box):** *"Requests Battery Swap & Hands over Vehicle / Pack ID"*.
-* [Arrow downwards to Lane 2: Station Attendant].
+### Lane 1: Electric Car Driver (Customer / Taxi Fleet)
+* **Start Event (Green Circle):** *"Drives Electric Car into Swapping Bay with Depleted Battery"*.
+* $\rightarrow$ **Activity (Rounded Box):** *"Aligns Vehicle in Bay & Scans Driver ID / Registration Plate"*.
+* [Arrow downwards to Lane 2: Station Attendant / Bay Operator].
 * [Arrow coming from Lane 3: System sends Fee Calculation].
-* $\rightarrow$ **Activity:** *"Reviews Energy Fee & Selects Payment Channel (MoMo / Cash)"*.
-* $\rightarrow$ **Activity:** *"Authorizes and Sends Mobile Money Payment"*.
+* $\rightarrow$ **Activity:** *"Reviews Energy Replenishment Fee & Authorizes Payment (MoMo / Fleet Card)"*.
+* $\rightarrow$ **Activity:** *"Submits Payment Confirmation"*.
 * [Arrow downwards to Lane 3: System validates payment].
-* [Arrow coming from Lane 2: Attendant hands over replacement].
-* $\rightarrow$ **Activity:** *"Receives Fully Charged Battery & Mounts to Vehicle"*.
-* $\rightarrow$ **End Event (Red Circle):** *"Departs Station (Process Completed)"*.
+* [Arrow coming from Lane 2: Automated bay completes installation].
+* $\rightarrow$ **Activity:** *"Confirms Vehicle Dashboard Battery Diagnostics & Full Charge"*.
+* $\rightarrow$ **End Event (Red Circle):** *"Drives Out of Swapping Bay (Process Completed)"*.
 
 ---
 
-### Lane 2: Station Attendant
-* [Receives request from Customer].
-* $\rightarrow$ **Activity:** *"Scans Depleted Battery Serial & Reads Customer Vehicle Plate"* `[RETRIEVE]`.
-* $\rightarrow$ **Activity:** *"Enters Swap Request into Station POS Terminal"*.
+### Lane 2: Station Attendant / Bay Operator
+* [Receives request from Car Driver].
+* $\rightarrow$ **Activity:** *"Scans Vehicle Plate & Reads Depleted Battery Serial"* `[RETRIEVE]`.
+* $\rightarrow$ **Activity:** *"Enters Swap Request into Bay Terminal Console"*.
 * [Arrow downwards to Lane 3: System checks inventory].
 * [Arrow coming from Lane 3: Swap authorized].
-* $\rightarrow$ **Activity:** *"Retrieves Allocated Charged Battery Pack from Smart Rack"*.
-* $\rightarrow$ **Activity:** *"Transfers Depleted Battery to Testing Buffer Rack"* `[UPDATE]`.
-* $\rightarrow$ **Activity:** *"Hands Replacement Battery to Customer"*.
-* [Arrow upwards to Lane 1: Customer].
+* $\rightarrow$ **Activity:** *"Initiates Automated Underbody Battery Exchange Mechanism"*.
+* $\rightarrow$ **Activity:** *"Transfers Depleted Car Battery Pack to Testing Buffer"* `[UPDATE]`.
+* $\rightarrow$ **Activity:** *"Signals Vehicle Clearance & Opens Bay Barrier"*.
+* [Arrow upwards to Lane 1: Driver].
 
 ---
 
 ### Lane 3: System / Database Engine (Oracle PL/SQL)
-* [Triggered by Station Attendant POS Entry].
-* $\rightarrow$ **Gateway / Decision Diamond:** *"Charged Battery Available at Station?"*
-  * **[Path NO]:** $\rightarrow$ Activity: *"Query Neighboring Station Inventory & Suggest Relocation / Wait"*. (Alternative path).
-  * **[Path YES]:** $\rightarrow$ Activity: *"Reserve Charged Battery Pack (SoC >= 90%)"* `[UPDATE]`.
-* $\rightarrow$ **Activity:** *"Calculate Net kWh Consumed & Dynamic Tariff Fee"* `[RETRIEVE/CALCULATE]`.
-* [Arrow upwards to Lane 1: Send Quote to Customer].
-* [Receives Payment Confirmation from Customer].
+* [Triggered by Bay Terminal Console Entry].
+* $\rightarrow$ **Gateway / Decision Diamond:** *"Charged Car Battery (SoC >= 90%) Available in Station Racks?"*
+  * **[Path NO]:** $\rightarrow$ Activity: *"Query Neighboring Station Inventory (via Distance Matrix) & Suggest Reroute / Reservation"*.
+  * **[Path YES]:** $\rightarrow$ Activity: *"Reserve Charged Car Battery Pack (SoC >= 90%)"* `[UPDATE]`.
+* $\rightarrow$ **Activity:** *"Calculate Net kWh Consumed & Dynamic Tariff Fee (Applying Taxi / Fleet Tiers)"* `[RETRIEVE/CALCULATE]`.
+* [Arrow upwards to Lane 1: Send Quote to Driver].
+* [Receives Payment Confirmation from Driver].
 * $\rightarrow$ **Gateway / Decision Diamond:** *"Payment Confirmed?"*
-  * **[Path NO]:** $\rightarrow$ Activity: *"Display Payment Failed Alert & Prompt Retry"*.
-  * **[Path YES]:** $\rightarrow$ Activity: *"Execute `process_battery_swap` Stored Procedure"* `[CREATE / UPDATE]`.
+  * **[Path NO]:** $\rightarrow$ Activity: *"Display Payment Failed Alert & Prompt Alternate Payment Method"*.
+  * **[Path YES]:** $\rightarrow$ Activity: *"Execute `process_battery_swap` Stored Procedure in Oracle"* `[CREATE / UPDATE]`.
 * $\rightarrow$ **Activity:** *"Insert Record into `SWAP_TRANSACTIONS` & `PAYMENTS`"* `[CREATE]`.
 * $\rightarrow$ **Activity:** *"Update Issued Battery to 'IN_USE' & Returned Battery to 'PENDING_INSPECTION'"* `[UPDATE]`.
-* [Arrow upwards to Lane 2: Attendant unlocked bay].
+* [Arrow upwards to Lane 2: Bay mechanism authorized].
 
 ---
 
-### Lane 4: Inspection Staff (Quality & Safety)
-* [Triggered when returned battery is placed in intake buffer].
-* $\rightarrow$ **Activity:** *"Picks Depleted Battery from Buffer Rack"*.
-* $\rightarrow$ **Activity:** *"Conducts Visual Casing, Pin Wear, and Voltage Bench Diagnostics"*.
+### Lane 4: High-Voltage Quality & Safety Technician
+* [Triggered when depleted car battery pack is placed on diagnostic bench].
+* $\rightarrow$ **Activity:** *"Positions Car Battery Pack on Diagnostic Test Platform"*.
+* $\rightarrow$ **Activity:** *"Conducts High-Voltage Insulation, Thermal Safety, and Cell Balance Diagnostics"*.
 * $\rightarrow$ **Gateway / Decision Diamond:** *"Battery Health & Condition PASSED?"*
-  * **[Path NO (Defect/Degraded)]:** $\rightarrow$ Activity: *"Flag Battery for Repair / Decommission & Route to Depot"* `[UPDATE]`.
-  * **[Path YES (Passed)]:** $\rightarrow$ Activity: *"Record Inspection Log (`PASSED`) & Plug into Charging Dock"* `[CREATE / UPDATE]`.
+  * **[Path NO (Thermal/Cell Defect)]:** $\rightarrow$ Activity: *"Flag Pack for Depot Overhaul & Route to Maintenance Facility"* `[UPDATE]`.
+  * **[Path YES (Passed)]:** $\rightarrow$ Activity: *"Record Inspection Log (`PASSED`) & Slot Pack into Fast-Charging Cabinet"* `[CREATE / UPDATE]`.
 * $\rightarrow$ **Activity:** *"System Updates Battery Status to 'CHARGING'"* `[UPDATE]`.
 
 ---
 
-### Lane 5: Operations Manager
-* $\rightarrow$ **Activity (Continuous/Periodic):** *"Monitors Live Station Stock, Swap Rates & Revenue via Dashboard"* `[RETRIEVE]`.
+### Lane 5: Operations & Fleet Manager
+* $\rightarrow$ **Activity (Continuous/Periodic):** *"Monitors Live 34-Station Stock, Daily Throughput & Revenue via Dashboard"* `[RETRIEVE]`.
 * $\rightarrow$ **Activity:** *"Reviews Audit Log for System Exceptions or Denied Swaps"* `[RETRIEVE]`.
-* $\rightarrow$ **Activity:** *"Dispatches Fleet Logistics for Battery Rebalancing between Hubs"*.
+* $\rightarrow$ **Activity:** *"Coordinates Battery Rebalancing Logistics between Commercial Hubs"*.
 
 ---
 
 ## Step 3: Color-Code Data CRUD Operations
 Inside each activity box, add a distinct color-coded tag:
 * `[CREATE]` – Green badge: E.g., `Insert SWAP_TRANSACTIONS`, `Insert PAYMENTS`, `Insert BATTERY_INSPECTIONS`.
-* `[RETRIEVE]` – Blue badge: E.g., `Query Available Stock`, `Lookup Customer`, `Calculate Fee`.
+* `[RETRIEVE]` – Blue badge: E.g., `Query Available Stock`, `Lookup Driver Profile`, `Calculate Tariff`.
 * `[UPDATE]` – Orange badge: E.g., `Update Battery to IN_USE`, `Update Battery to CHARGING`.
 * `[DELETE / ARCHIVE]` – Red badge: E.g., `Decommission Defective Pack`.
 

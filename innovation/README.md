@@ -1,4 +1,4 @@
-# VoltSwap Innovation Layer: Interactive Attendant & Operations Console
+# VoltSwap Innovation Layer: Interactive Electric Car Swapping & Operations Console
 
 **Course:** INSY 8311 – Database Development with PL/SQL  
 **Student:** NSHIMYUMUKIZA Felicien (ID: 20251SEN197)  
@@ -8,13 +8,13 @@
 ---
 
 ## 1. Executive Summary & Problem Fit (2 Marks)
-In high-throughput urban swapping hubs, station attendants cannot navigate SQL Developer or command-line terminals while riders wait in queues. The VoltSwap Innovation Layer provides a dedicated, lightweight web console powered by Python Streamlit and `python-oracledb`. 
+In high-throughput urban electric car battery swapping stations, bay operators and fleet dispatchers cannot navigate complex database consoles while passenger cars and electric taxi fleets queue in drive-in bays. The VoltSwap Innovation Layer provides a dedicated, lightweight web console powered by Python Streamlit and `python-oracledb`. 
 
 It enables:
-* Real-time multi-hub battery inventory tracking (Charged vs Charging vs Maintenance).
-* Attendant point-of-sale execution invoking the `process_battery_swap` PL/SQL stored procedure with a single click.
-* Live enforcement of safety triggers (preventing issuance of degraded or uninspected packs).
-* Live telemetry for operations managers monitoring energy dispensed (kWh) and revenue collected (RWF).
+* Real-time 34-station high-capacity car battery inventory tracking (Charged vs Charging vs Maintenance).
+* Point-of-sale car swap execution invoking the `process_battery_swap` PL/SQL stored procedure with a single click.
+* Live enforcement of high-voltage safety triggers (blocking issuance of uninspected or degraded automotive packs).
+* Telemetry for fleet managers monitoring energy dispensed (kWh), revenue collected (RWF), and station vulnerability indices (`Table D.1`).
 
 ---
 
@@ -26,38 +26,28 @@ The application connects directly to the project's Oracle Pluggable Database (`b
 * **User:** `felicien_admin`
 * **Password:** `felicien`
 
-All business logic (energy tariff calculations, inventory transitions, and safety constraints) remains strictly inside Oracle PL/SQL packages and triggers. The Streamlit interface acts solely as an operational and presentation client.
+All business logic (energy tariff calculations, customer fleet tier discounts, inventory transitions, and safety constraints) remains strictly inside Oracle PL/SQL packages and triggers. The Streamlit interface acts solely as an operational and presentation client.
 
 ---
 
 ## 3. How to Run the Innovation App (2 Marks)
 
 ### Step 1: Install Dependencies
-Open your terminal / PowerShell in the project directory and install the requirements:
+Open your terminal / PowerShell in the project directory:
 ```powershell
-pip install -r innovation/requirements.txt
+py -3.10 -m pip install -r innovation/requirements.txt
 ```
 
-### Step 2: Configure Database Credentials (Optional)
-By default, the application connects to `localhost:1521/b_197_felicien_voltswap_db` using `felicien_admin`. You can override these using environment variables:
+### Step 2: Launch the Streamlit Console
 ```powershell
-$env:DB_USER = "felicien_admin"
-$env:DB_PASS = "felicien"
-$env:DB_HOST = "localhost"
-$env:DB_PORT = "1521"
-$env:DB_SERVICE = "b_197_felicien_voltswap_db"
-```
-
-### Step 3: Launch the Streamlit Console
-```powershell
-streamlit run innovation/app.py
+py -3.10 -m streamlit run innovation/app.py
 ```
 The application will launch in your default web browser at `http://localhost:8501`.
 
 ---
 
 ## 4. Demonstration Features for the Final Exam Defense
-1. **Live Inventory Telemetry:** Switch between Kigali Central Hub, Remera, and Kimironko to observe available charged units.
-2. **Execute Swap:** Submit a new battery swap for customer `CUST_1042`. Observe the returned confirmation JSON proving the database transaction committed.
+1. **Live 34-Station Telemetry:** Explore real-time metrics across 34 commercial hubs, viewing cumulative 92-day swaps and arrival State of Charge ($11\%–16\%$).
+2. **Execute Car Swap:** Select incoming electric car plate `RAA 101K` at station `BS007`. Observe the committed transaction JSON proving the Oracle PL/SQL procedure executed.
 3. **Trigger Violation Demo:** Attempt to allocate an uninspected battery $\rightarrow$ Show the user interface catching the Oracle trigger exception and preventing dangerous issuance.
-4. **Audit Trail Review:** Inspect the live audit table displaying security logs and blocked operations.
+4. **Vulnerability & Outage Tracking:** Review the station disruption table and vulnerability scores across October, November, and December.

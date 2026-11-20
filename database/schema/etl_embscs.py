@@ -1,13 +1,14 @@
 """
-ETL Pipeline: Transform EMBSCS Raw Dataset into VoltSwap Relational Oracle Schema
+ETL Pipeline: Transform EMBSCS Raw Dataset into VoltSwap Relational Oracle Schema (Electric Cars)
 Course: INSY 8311 - Database Development with PL/SQL
 Student: NSHIMYUMUKIZA Felicien (ID: 20251SEN197)
 
 Processes:
-1. 34 Stations from VDF9 (compartments), VDF8 (distance), Table D.1 (vulnerability), VEF1 (disruptions), VEF2 (flood risk).
+1. 34 Stations from VDF9 (drive-in bay compartments), VDF8 (distance), Table D.1 (vulnerability), VEF1 (disruptions).
 2. 3,128 Daily Observations unpivoted from PI_1, PI_2, PI_3 (Oct-Dec 2023).
 3. VDF1 (SoC at swap) and VDF4 (swap completion time) mapped to daily metrics.
-4. Generates clean SQL insert script: database/schema/02_insert_clean_data.sql.
+4. Battery models customized for Electric Cars (40 kWh, 60 kWh, 85 kWh).
+5. Generates clean SQL insert script: database/schema/02_insert_clean_data.sql.
 """
 
 import os
@@ -18,9 +19,9 @@ base_dir = os.path.join('data', 'raw', 'embscs-dataset-main')
 sql_out_path = os.path.join('database', 'schema', '02_insert_clean_data.sql')
 
 def run():
-    print("Starting ETL on EMBSCS empirical dataset...")
+    print("Starting ETL on EMBSCS empirical dataset for Electric Cars...")
 
-    # 1. Parse VDF9 (Activated Compartments)
+    # 1. Parse VDF9 (Activated Bay Compartments)
     wb_comp = openpyxl.load_workbook(os.path.join(base_dir, 'VDF9_Activated_compartment.xlsx'))
     comp = {}
     for r in wb_comp.active.iter_rows(values_only=True):
@@ -95,7 +96,6 @@ def run():
 
     print(f"Loaded {len(all_stations)} stations and {len(pi1)} daily observation pairs.")
 
-    # Assign stations to Kigali districts for VoltSwap localization
     districts = ['Nyarugenge', 'Gasabo', 'Kicukiro']
 
     with open(sql_out_path, 'w', encoding='utf-8') as out:
@@ -105,7 +105,7 @@ def run():
   Student Name: NSHIMYUMUKIZA Felicien
   Student ID:   20251SEN197
   Group:        Group B
-  Project Name: VoltSwap Multi-Station Battery Swapping Management System
+  Project Name: VoltSwap Multi-Station Electric Car Battery Swapping Management System
   Script:       database/schema/02_insert_clean_data.sql
   Description:  Populates 34 Stations, Station Disruptions, and 3,128 Daily
                 Station Operations from the real-world EMBSCS dataset.
@@ -115,7 +115,7 @@ def run():
 SET FEEDBACK OFF;
 SET DEFINE OFF;
 
-PROMPT Inserting 34 Real-World STATIONS from EMBSCS Dataset...
+PROMPT Inserting 34 Commercial EV Car Swapping STATIONS...
 """)
 
         for i, st in enumerate(all_stations):
@@ -123,7 +123,7 @@ PROMPT Inserting 34 Real-World STATIONS from EMBSCS Dataset...
             c_bays = comp.get(st, 8)
             d_meters = dist.get(st, 3500)
             v_score = vuln.get(st, (0.55, 0.55, 0.55))[0]
-            st_name = f"VoltSwap Station {st}"
+            st_name = f"VoltSwap Car Station {st}"
             out.write(f"INSERT INTO STATIONS (station_id, station_code, station_name, district, total_bays, distance_to_hub_m, vulnerability_score, station_status) VALUES ('{st}', '{st}', '{st_name}', '{district}', {c_bays}, {d_meters}, {v_score}, 'ACTIVE');\n")
 
         out.write("\nPROMPT Inserting STATION_DISRUPTIONS (VEF1 Outage Logs)...\n")
@@ -139,10 +139,10 @@ PROMPT Inserting 34 Real-World STATIONS from EMBSCS Dataset...
                 out.write(f"INSERT INTO STATION_DISRUPTIONS (disruption_id, station_id, month_recorded, outage_count, remarks) VALUES ({disr_id}, '{st}', '2023-12', {ddec}, 'December operational disruption events logged');\n")
                 disr_id += 1
 
-        out.write(f"\nPROMPT Inserting Reference Data: BATTERY_MODELS...\n")
-        out.write("INSERT INTO BATTERY_MODELS (model_id, model_name, capacity_kwh, nominal_voltage, rated_cycles) VALUES ('MOD_01', 'VoltCore-48V', 3.2, '48V', 1500);\n")
-        out.write("INSERT INTO BATTERY_MODELS (model_id, model_name, capacity_kwh, nominal_voltage, rated_cycles) VALUES ('MOD_02', 'VoltMax-60V', 4.5, '60V', 2000);\n")
-        out.write("INSERT INTO BATTERY_MODELS (model_id, model_name, capacity_kwh, nominal_voltage, rated_cycles) VALUES ('MOD_03', 'VoltPro-72V', 5.8, '72V', 2200);\n")
+        out.write(f"\nPROMPT Inserting Reference Data: BATTERY_MODELS (Automotive EV Packs)...\n")
+        out.write("INSERT INTO BATTERY_MODELS (model_id, model_name, capacity_kwh, nominal_voltage, rated_cycles) VALUES ('MOD_01', 'VoltCar-40kWh', 40.0, '400V', 1500);\n")
+        out.write("INSERT INTO BATTERY_MODELS (model_id, model_name, capacity_kwh, nominal_voltage, rated_cycles) VALUES ('MOD_02', 'VoltCar-60kWh', 60.0, '400V', 2000);\n")
+        out.write("INSERT INTO BATTERY_MODELS (model_id, model_name, capacity_kwh, nominal_voltage, rated_cycles) VALUES ('MOD_03', 'VoltCar-85kWh', 85.0, '800V', 2200);\n")
 
         out.write(f"\nPROMPT Inserting {len(pi1)} STATION_DAILY_METRICS records (PI_1, PI_2, PI_3 unpivoted)...\n")
         metric_id = 1
@@ -154,24 +154,25 @@ PROMPT Inserting 34 Real-World STATIONS from EMBSCS Dataset...
             out.write(f"INSERT INTO STATION_DAILY_METRICS (metric_id, station_id, operation_date, swap_throughput, unique_batteries_swapped, customers_served, avg_swap_time_min, avg_soc_pct) VALUES ({metric_id}, '{st}', DATE '{dt}', {throughput}, {u_bat}, {cust}, {s_time}, {avg_soc});\n")
             metric_id += 1
 
-        out.write("\nPROMPT Inserting Seed Customer, Battery Hardware and Transactional Records...\n")
+        out.write("\nPROMPT Inserting EV Car Drivers and Vehicle Registration Records...\n")
         for c_idx in range(1, 41):
             c_id = f"CUST_{1000+c_idx}"
-            c_name = f"Customer_{1000+c_idx}"
+            c_name = f"EV_Driver_{1000+c_idx}"
             c_phone = f"+250788{c_idx:06d}"
-            c_plate = f"RA{chr(65 + (c_idx % 7))} {100+c_idx}K"
+            c_plate = f"RA{chr(65 + (c_idx % 7))} {100+c_idx}C"
             out.write(f"INSERT INTO CUSTOMERS (customer_id, customer_name, customer_phone, vehicle_plate, registration_date, account_status) VALUES ('{c_id}', '{c_name}', '{c_phone}', '{c_plate}', DATE '2023-09-01', 'ACTIVE');\n")
 
+        out.write("\nPROMPT Inserting High-Voltage EV Car Batteries...\n")
         for b_idx in range(1, 101):
             b_id = f"BAT_{b_idx:04d}"
-            b_serial = f"BAT-{b_idx:04d}"
+            b_serial = f"BAT-CAR-{b_idx:04d}"
             st_assign = all_stations[b_idx % len(all_stations)]
             mod = 'MOD_01' if b_idx <= 50 else ('MOD_02' if b_idx <= 80 else 'MOD_03')
             soc = 95 if b_idx % 3 != 0 else 15
             stat = 'CHARGED' if soc >= 90 else 'PENDING_INSPECTION'
-            out.write(f"INSERT INTO BATTERIES (battery_id, serial_number, model_id, current_station_id, current_soc_pct, health_status, total_swaps) VALUES ('{b_id}', '{b_serial}', '{mod}', '{st_assign}', {soc}, '{stat}', 12);\n")
+            out.write(f"INSERT INTO BATTERIES (battery_id, serial_number, model_id, current_station_id, current_soc_pct, health_status, total_swaps) VALUES ('{b_id}', '{b_serial}', '{mod}', '{st_assign}', {soc}, '{stat}', 18);\n")
 
-        out.write("\nCOMMIT;\nPROMPT Clean data insertion from EMBSCS dataset completed successfully.\n")
+        out.write("\nCOMMIT;\nPROMPT Clean data insertion for Electric Cars completed successfully.\n")
 
     print(f"Generated clean SQL load script: {sql_out_path}")
 

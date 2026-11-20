@@ -4,36 +4,37 @@
   Student Name: NSHIMYUMUKIZA Felicien
   Student ID:   20251SEN197
   Group:        Group B
-  Project Name: VoltSwap Multi-Station Battery Swapping Management System
+  Project Name: VoltSwap Multi-Station Electric Car Battery Swapping Management System
   Script:       database/plsql/01_functions.sql
-  Description:  Core business logic stored functions: tariff fee calculation,
-                inventory stock checking, and battery health grading.
+  Description:  Core business logic stored functions: EV car tariff calculation,
+                station inventory availability checking, and battery health grading.
 ============================================================================
 */
 
 -- --------------------------------------------------------------------------
 -- Function 1: calculate_swap_fee
--- Calculates dynamic energy tariff based on net kWh replenished and customer tier
+-- Calculates dynamic energy tariff based on net kWh replenished for electric cars
+-- Customer Tiers: PRIVATE_CAR (0%), COMMERCIAL_TAXI (10%), CORPORATE_FLEET (15%)
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION calculate_swap_fee (
     p_returned_soc   IN NUMBER,
     p_issued_soc     IN NUMBER,
     p_model_id       IN VARCHAR2,
-    p_customer_tier  IN VARCHAR2 DEFAULT 'STANDARD'
+    p_customer_tier  IN VARCHAR2 DEFAULT 'PRIVATE_CAR'
 ) RETURN NUMBER
 IS
     v_capacity_kwh   BATTERY_MODELS.capacity_kwh%TYPE;
     v_net_energy_kwh NUMBER(6,2);
-    v_base_rate_rwf  CONSTANT NUMBER := 900; -- Standard tariff: 900 RWF per kWh
+    v_base_rate_rwf  CONSTANT NUMBER := 350; -- Standard tariff: 350 RWF per kWh for EV cars
     v_discount_pct   NUMBER := 0;
     v_total_fee      NUMBER(10,2);
 BEGIN
     -- Input validations
     IF p_returned_soc >= p_issued_soc THEN
-        RAISE_APPLICATION_ERROR(-20010, 'Invalid SoC: Issued battery charge must exceed returned charge.');
+        RAISE_APPLICATION_ERROR(-20010, 'Invalid SoC: Issued car battery charge must exceed returned charge.');
     END IF;
 
-    -- Retrieve model nominal capacity
+    -- Retrieve EV car battery model nominal capacity (40 - 85 kWh)
     SELECT capacity_kwh INTO v_capacity_kwh
     FROM BATTERY_MODELS
     WHERE model_id = p_model_id;
@@ -41,11 +42,11 @@ BEGIN
     -- Compute net energy dispensed: (SoC_out - SoC_in)% * Capacity
     v_net_energy_kwh := ROUND(v_capacity_kwh * ((p_issued_soc - p_returned_soc) / 100.0), 2);
 
-    -- Apply customer loyalty / fleet tier discount
+    -- Apply EV customer loyalty / commercial fleet tier discount
     CASE UPPER(TRIM(p_customer_tier))
-        WHEN 'COMMERCIAL_MOTO' THEN v_discount_pct := 0.10; -- 10% discount for moto taxi riders
-        WHEN 'VIP_FLEET'       THEN v_discount_pct := 0.15; -- 15% discount for corporate logistics
-        ELSE v_discount_pct := 0.00;
+        WHEN 'COMMERCIAL_TAXI' THEN v_discount_pct := 0.10; -- 10% discount for electric taxi fleets
+        WHEN 'CORPORATE_FLEET' THEN v_discount_pct := 0.15; -- 15% discount for corporate EV fleets
+        ELSE v_discount_pct := 0.00;                       -- Standard rate for private car drivers
     END CASE;
 
     -- Calculate fee rounded to nearest Rwandan Franc
@@ -55,7 +56,7 @@ BEGIN
 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20011, 'Specified battery model ' || p_model_id || ' does not exist.');
+        RAISE_APPLICATION_ERROR(-20011, 'Specified car battery model ' || p_model_id || ' does not exist.');
     WHEN OTHERS THEN
         RAISE_APPLICATION_ERROR(-20012, 'Error in calculate_swap_fee: ' || SQLERRM);
 END calculate_swap_fee;
@@ -63,7 +64,7 @@ END calculate_swap_fee;
 
 -- --------------------------------------------------------------------------
 -- Function 2: check_station_availability
--- Returns total ready charged packs (SoC >= 90% and status CHARGED)
+-- Returns total ready charged car packs (SoC >= 90% and status CHARGED)
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION check_station_availability (
     p_station_id IN VARCHAR2,
@@ -86,7 +87,7 @@ END check_station_availability;
 
 -- --------------------------------------------------------------------------
 -- Function 3: get_battery_health_grade
--- Classifies battery degradation based on swap cycle count and inspections
+-- Classifies automotive battery degradation based on swap cycle count and inspections
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION get_battery_health_grade (
     p_battery_id IN VARCHAR2
@@ -103,7 +104,7 @@ BEGIN
     JOIN BATTERY_MODELS m ON b.model_id = m.model_id
     WHERE b.battery_id = p_battery_id;
 
-    -- Check if battery had any failed/degraded inspection
+    -- Check if automotive battery had any failed high-voltage inspection
     SELECT COUNT(*)
     INTO v_degraded_cnt
     FROM BATTERY_INSPECTIONS
