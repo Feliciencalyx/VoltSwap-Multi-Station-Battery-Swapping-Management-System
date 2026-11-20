@@ -6,21 +6,66 @@
   Group:        Group B
   Project Name: VoltSwap Multi-Station Battery Swapping Management System
   Script:       database/schema/01_tables.sql
-  Description:  Physical DDL script creating all 7 Third Normal Form (3NF) 
-                tables, primary keys, foreign keys, and check constraints.
+  Description:  Physical DDL script creating all Third Normal Form (3NF) 
+                tables integrating the empirical 34-station EMBSCS dataset
+                with granular swapping transaction entities.
 ============================================================================
 */
 
--- Clean up existing tables in reverse dependency order
+-- Drop existing tables in reverse dependency order
 BEGIN
     FOR t IN (SELECT table_name FROM user_tables WHERE table_name IN (
         'BATTERY_INSPECTIONS', 'PAYMENTS', 'SWAP_TRANSACTIONS',
-        'BATTERIES', 'BATTERY_MODELS', 'STATIONS', 'CUSTOMERS'
+        'BATTERIES', 'BATTERY_MODELS', 'CUSTOMERS',
+        'STATION_DAILY_METRICS', 'STATION_DISRUPTIONS', 'STATIONS'
     )) LOOP
         EXECUTE IMMEDIATE 'DROP TABLE ' || t.table_name || ' CASCADE CONSTRAINTS PURGE';
     END LOOP;
 END;
 /
+
+PROMPT Creating Table: STATIONS (34 Real-World Hubs)...
+CREATE TABLE STATIONS (
+    station_id          VARCHAR2(20)    NOT NULL,
+    station_code        VARCHAR2(20)    NOT NULL,
+    station_name        VARCHAR2(100)   NOT NULL,
+    district            VARCHAR2(50)    NOT NULL,
+    total_bays          NUMBER(3)       DEFAULT 8 NOT NULL,
+    distance_to_hub_m   NUMBER(8)       DEFAULT 0 NOT NULL,
+    vulnerability_score NUMBER(5,3)     DEFAULT 0.500 NOT NULL,
+    station_status      VARCHAR2(20)    DEFAULT 'ACTIVE' NOT NULL,
+    CONSTRAINT pk_stations PRIMARY KEY (station_id),
+    CONSTRAINT uq_station_code UNIQUE (station_code),
+    CONSTRAINT chk_station_district CHECK (district IN ('Nyarugenge', 'Gasabo', 'Kicukiro')),
+    CONSTRAINT chk_total_bays CHECK (total_bays > 0),
+    CONSTRAINT chk_station_status CHECK (station_status IN ('ACTIVE', 'DISRUPTED', 'MAINTENANCE', 'OFFLINE'))
+);
+
+PROMPT Creating Table: STATION_DISRUPTIONS (VEF1 Outage Logs)...
+CREATE TABLE STATION_DISRUPTIONS (
+    disruption_id       NUMBER          NOT NULL,
+    station_id          VARCHAR2(20)    NOT NULL,
+    month_recorded      VARCHAR2(10)    NOT NULL,
+    outage_count        NUMBER(4)       NOT NULL,
+    remarks             VARCHAR2(255),
+    CONSTRAINT pk_disruptions PRIMARY KEY (disruption_id),
+    CONSTRAINT fk_disr_station FOREIGN KEY (station_id) REFERENCES STATIONS(station_id)
+);
+
+PROMPT Creating Table: STATION_DAILY_METRICS (3,128 Empirical Records from PI_1, PI_2, PI_3)...
+CREATE TABLE STATION_DAILY_METRICS (
+    metric_id               NUMBER          NOT NULL,
+    station_id              VARCHAR2(20)    NOT NULL,
+    operation_date          DATE            NOT NULL,
+    swap_throughput         NUMBER(5)       NOT NULL,
+    unique_batteries_swapped NUMBER(5)      NOT NULL,
+    customers_served        NUMBER(5)       NOT NULL,
+    avg_swap_time_min       NUMBER(4,2)     DEFAULT 1.35 NOT NULL,
+    avg_soc_pct             NUMBER(4,1)     DEFAULT 14.5 NOT NULL,
+    CONSTRAINT pk_daily_metrics PRIMARY KEY (metric_id),
+    CONSTRAINT fk_metric_station FOREIGN KEY (station_id) REFERENCES STATIONS(station_id),
+    CONSTRAINT uq_station_date UNIQUE (station_id, operation_date)
+);
 
 PROMPT Creating Table: CUSTOMERS...
 CREATE TABLE CUSTOMERS (
@@ -34,20 +79,6 @@ CREATE TABLE CUSTOMERS (
     CONSTRAINT uq_cust_phone UNIQUE (customer_phone),
     CONSTRAINT uq_cust_plate UNIQUE (vehicle_plate),
     CONSTRAINT chk_cust_status CHECK (account_status IN ('ACTIVE', 'SUSPENDED', 'FLAGGED'))
-);
-
-PROMPT Creating Table: STATIONS...
-CREATE TABLE STATIONS (
-    station_id          VARCHAR2(20)    NOT NULL,
-    station_name        VARCHAR2(100)   NOT NULL,
-    district            VARCHAR2(50)    NOT NULL,
-    total_bays          NUMBER(3)       DEFAULT 20 NOT NULL,
-    station_status      VARCHAR2(20)    DEFAULT 'ACTIVE' NOT NULL,
-    CONSTRAINT pk_stations PRIMARY KEY (station_id),
-    CONSTRAINT uq_station_name UNIQUE (station_name),
-    CONSTRAINT chk_station_district CHECK (district IN ('Nyarugenge', 'Gasabo', 'Kicukiro')),
-    CONSTRAINT chk_total_bays CHECK (total_bays > 0),
-    CONSTRAINT chk_station_status CHECK (station_status IN ('ACTIVE', 'MAINTENANCE', 'OFFLINE'))
 );
 
 PROMPT Creating Table: BATTERY_MODELS...
@@ -136,13 +167,13 @@ CREATE TABLE BATTERY_INSPECTIONS (
     ))
 );
 
--- Indexes on foreign keys for high query performance
-CREATE INDEX idx_bat_model ON BATTERIES(model_id);
-CREATE INDEX idx_bat_station ON BATTERIES(current_station_id);
+-- Performance Indexes
+CREATE INDEX idx_daily_stn ON STATION_DAILY_METRICS(station_id);
+CREATE INDEX idx_daily_date ON STATION_DAILY_METRICS(operation_date);
+CREATE INDEX idx_disr_stn ON STATION_DISRUPTIONS(station_id);
+CREATE INDEX idx_bat_stn ON BATTERIES(current_station_id);
 CREATE INDEX idx_swap_cust ON SWAP_TRANSACTIONS(customer_id);
 CREATE INDEX idx_swap_stn ON SWAP_TRANSACTIONS(station_id);
-CREATE INDEX idx_swap_time ON SWAP_TRANSACTIONS(swap_time);
 CREATE INDEX idx_pay_swap ON PAYMENTS(swap_id);
-CREATE INDEX idx_insp_bat ON BATTERY_INSPECTIONS(battery_id);
 
-PROMPT Table creation completed successfully.
+PROMPT Tables and indexes created successfully.

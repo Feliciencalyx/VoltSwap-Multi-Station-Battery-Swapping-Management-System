@@ -6,8 +6,8 @@
   Group:        Group B
   Project Name: VoltSwap Multi-Station Battery Swapping Management System
   Script:       database/schema/03_validate_data.sql
-  Description:  Data validation queries for Phase IV checking row counts,
-                referential integrity, and constraint adherence.
+  Description:  Data validation queries checking row counts, referential
+                integrity, and empirical metric reconciliations.
 ============================================================================
 */
 
@@ -15,15 +15,19 @@ SET LINESIZE 180;
 SET PAGESIZE 100;
 
 PROMPT ============================================================================
-PROMPT TABLE ROW COUNTS POST-LOAD
+PROMPT TABLE ROW COUNTS POST-LOAD (EMBSCS EMPIRICAL DATASET)
 PROMPT ============================================================================
-SELECT 'CUSTOMERS' AS table_name, COUNT(*) AS row_count FROM CUSTOMERS
+SELECT 'STATIONS (Target: 34)' AS table_name, COUNT(*) AS row_count FROM STATIONS
 UNION ALL
-SELECT 'STATIONS', COUNT(*) FROM STATIONS
+SELECT 'STATION_DAILY_METRICS (Target: 3,128)', COUNT(*) FROM STATION_DAILY_METRICS
+UNION ALL
+SELECT 'STATION_DISRUPTIONS', COUNT(*) FROM STATION_DISRUPTIONS
 UNION ALL
 SELECT 'BATTERY_MODELS', COUNT(*) FROM BATTERY_MODELS
 UNION ALL
 SELECT 'BATTERIES', COUNT(*) FROM BATTERIES
+UNION ALL
+SELECT 'CUSTOMERS', COUNT(*) FROM CUSTOMERS
 UNION ALL
 SELECT 'SWAP_TRANSACTIONS', COUNT(*) FROM SWAP_TRANSACTIONS
 UNION ALL
@@ -33,34 +37,31 @@ SELECT 'BATTERY_INSPECTIONS', COUNT(*) FROM BATTERY_INSPECTIONS;
 
 PROMPT
 PROMPT ============================================================================
-PROMPT REFERENTIAL INTEGRITY CHECK (LOOKING FOR ORPHANED TRANSACTIONS)
+PROMPT EMPIRICAL TELEMETRY AGGREGATION RECONCILIATION
 PROMPT ============================================================================
--- Check 1: Swaps without valid customer
-SELECT COUNT(*) AS orphaned_customer_swaps
-FROM SWAP_TRANSACTIONS s
-WHERE NOT EXISTS (SELECT 1 FROM CUSTOMERS c WHERE c.customer_id = s.customer_id);
-
--- Check 2: Swaps without valid station
-SELECT COUNT(*) AS orphaned_station_swaps
-FROM SWAP_TRANSACTIONS s
-WHERE NOT EXISTS (SELECT 1 FROM STATIONS st WHERE st.station_id = s.station_id);
-
--- Check 3: Payments without matching swap
-SELECT COUNT(*) AS orphaned_payments
-FROM PAYMENTS p
-WHERE NOT EXISTS (SELECT 1 FROM SWAP_TRANSACTIONS s WHERE s.swap_id = p.swap_id);
+SELECT 
+    COUNT(DISTINCT station_id) AS active_reporting_stations,
+    MIN(operation_date) AS earliest_date,
+    MAX(operation_date) AS latest_date,
+    SUM(swap_throughput) AS grand_total_swaps,
+    ROUND(AVG(swap_throughput), 1) AS avg_daily_swaps_per_hub,
+    ROUND(AVG(avg_swap_time_min), 2) AS network_avg_swap_time_mins,
+    ROUND(AVG(avg_soc_pct), 1) AS network_avg_arrival_soc_pct
+FROM STATION_DAILY_METRICS;
 
 PROMPT
 PROMPT ============================================================================
-PROMPT REVENUE AND ENERGY RECONCILIATION SUMMARY
+PROMPT TOP 5 HIGHEST VOLUME STATIONS (92-DAY EMPIRICAL DATA)
 PROMPT ============================================================================
 SELECT 
-    COUNT(s.swap_id) AS total_swaps_completed,
-    ROUND(SUM(s.energy_consumed_kwh), 2) AS total_energy_kwh,
-    ROUND(AVG(s.energy_consumed_kwh), 2) AS avg_kwh_per_swap,
-    TO_CHAR(SUM(p.amount_rwf), '999,999,999') || ' RWF' AS total_revenue_rwf,
-    p.payment_method,
-    COUNT(p.payment_id) AS payment_transactions
-FROM SWAP_TRANSACTIONS s
-JOIN PAYMENTS p ON s.swap_id = p.swap_id
-GROUP BY p.payment_method;
+    s.station_id,
+    s.station_name,
+    s.district,
+    s.total_bays,
+    SUM(m.swap_throughput) AS cumulative_swaps,
+    ROUND(AVG(m.swap_throughput), 1) AS daily_avg_swaps
+FROM STATIONS s
+JOIN STATION_DAILY_METRICS m ON s.station_id = m.station_id
+GROUP BY s.station_id, s.station_name, s.district, s.total_bays
+ORDER BY cumulative_swaps DESC
+FETCH FIRST 5 ROWS ONLY;

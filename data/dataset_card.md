@@ -1,71 +1,65 @@
-# Dataset Card: VoltSwap Battery Swapping Operational Log
+# Dataset Card: EMBSCS 34-Station Electric Motorcycle Battery Swapping Dataset
 
 ## 1. Dataset Overview
 
-* **Dataset Name:** VoltSwap Kigali Multi-Station Swapping Operations Log
-* **File Location:** `data/raw/raw_battery_swaps.csv`
-* **Format:** Comma-Separated Values (`.csv`), UTF-8 encoded
-* **Record Count:** 550 records
-* **File Size:** ~72 KB
-* **Date Collected:** September – November 2026
-* **Collection Method:** Aggregated operational export from multi-station swap terminals across Kigali City.
-* **Source / Platform:** Internal operational logs synthesized for academic development (VoltSwap Technologies Ltd.).
-* **Licence:** Creative Commons Attribution 4.0 International (CC BY 4.0) — Permitted for academic and educational evaluation.
+* **Dataset Name:** Electric Motorcycle Battery Swapping and Charging Stations (EMBSCS) Empirical Telemetry Dataset
+* **Raw Files Storage:** `data/raw/embscs-dataset-main/` (Preserved raw and unedited, containing 9 CSV files and 14 Excel workbooks)
+* **Format:** Semicolon-delimited `.csv` (PI metrics) and OpenXML `.xlsx` (VDF/VEF indices)
+* **Total Scope:**
+  * **34 Commercial Swapping Stations** (`BS007` through `BS290`)
+  * **92 Consecutive Calendar Days** (October 1 – December 31, 2023)
+  * **3,128 Station-Day Observations** per Performance Indicator category
+  * **9,384 Total Performance Metric Observations** across the three CSV series
+  * **144,389 Total Battery Swap Transactions** recorded across the 34-station network
+* **Source / Platform:** Published Open Access Academic Research Repository on Electric Motorcycle Battery Swapping Vulnerability & Performance Indicators (EMBSCS).
+* **Licence:** Creative Commons Attribution 4.0 International (CC BY 4.0) — Permitted for academic research and database engineering evaluation.
 
 ---
 
 ## 2. What One Record Represents
 
-Each row represents an un-normalized, flat operational event where an electric motorcycle rider (customer) arrives at a designated swapping station, returns a depleted lithium battery pack, receives a fully charged battery pack, makes an electronic or cash payment, and has the returned battery inspected by on-duty station attendants.
+The dataset contains two complementary operational representations:
+1. **Daily Operational Observation (Station-Day Record):**
+   Each record in `PI_1`, `PI_2`, and `PI_3` represents the aggregate 24-hour activity of a specific battery swapping station on a given calendar date:
+   * `swap_throughput`: Number of battery swaps completed on that date.
+   * `unique_batteries`: Count of distinct physical battery packs processed through that station.
+   * `customers_served`: Count of distinct motorcycle riders who performed swaps.
+2. **Station Infrastructure & Vulnerability Metrics:**
+   Each station profile in the `VDF` and `VEF` series represents physical hardware and environmental factors:
+   * `active_compartments`: Total active charging bays/doors per cabinet (6 to 9 compartments, `VDF9`).
+   * `distance_to_hub`: Physical road distance in meters to the primary metropolitan logistics depot (`VDF8`).
+   * `avg_soc_swapping`: Typical remaining battery charge upon intake (11% to 16% SoC, `VDF1`).
+   * `swap_completion_time`: Average duration in minutes to complete a swap (1.2 to 1.5 minutes, `VDF4`).
+   * `operational_disruptions`: Grid outage and equipment disruption counts (`VEF1`).
+   * `vulnerability_score`: Composite vulnerability index ($0.000$ to $1.000$, `Table D.1`).
 
 ---
 
-## 3. Data Dictionary (Raw Fields)
+## 3. Raw Data Files Inventory
 
-| Field Name | Raw Data Type | Example Value | Description |
+| File Series | Files Included | Metrics Captured | Dimensions |
 | :--- | :--- | :--- | :--- |
-| `swap_id` | Text | `SWP_10001` | Operational swap transaction code |
-| `customer_id` | Text | `CUST_1042` | Anonymized unique customer reference |
-| `customer_name` | Text | `Customer_1042` | Anonymized rider name |
-| `customer_phone` | Text | `+250788***42` | Masked Rwandan telephone contact |
-| `vehicle_plate` | Text | `RAD 142E` | Vehicle registration plate |
-| `station_name` | Text | `Kigali Central Hub` | Name of physical swapping station |
-| `station_district` | Text | `Nyarugenge` | District location of station (uncleaned) |
-| `battery_returned_serial` | Text | `BAT-0185` | Serial number of returned depleted pack |
-| `returned_soc_pct` | Integer | `12` | Remaining State of Charge percentage |
-| `battery_issued_serial` | Text | `BAT-0412` | Serial number of issued charged pack |
-| `issued_soc_pct` | Integer | `98` | State of Charge percentage of issued pack |
-| `battery_model` | Text | `VoltCore-48V` | Model name / specification code |
-| `model_capacity` | Text | `3.2 kWh` | Total rated battery energy storage |
-| `energy_consumed` | Text | `2.75 kWh` | Net energy replenished (uncleaned text) |
-| `fee_amount` | Text | `2475 RWF` | Swapping service fee billed (uncleaned text) |
-| `payment_method` | Text | `MTN_MOMO` | Channel used (`MTN_MOMO`, `AIRTEL_MONEY`, `CARD`, `CASH`) |
-| `payment_status` | Text | `COMPLETED` | Settlement status (`COMPLETED`, `PENDING`) |
-| `swap_time` | Text | `2026-09-14 14:22:10` | Date and time of swap (some nulls) |
-| `attendant_name` | Text | `Jean_Pierre_N` | Attendant on duty who conducted the swap |
-| `inspection_result` | Text | `PASSED` | Physical & voltage test outcome |
-| `inspection_notes` | Text | `Inspected by Jean_Pierre_N: PASSED. Terminal check ok.` | Free-form inspector remarks |
+| **`PI_1_Throughput`** | Oct, Nov, Dec 2023 (3 CSVs) | Daily swap transactions completed per station | 92 days $\times$ 34 stations |
+| **`PI_2_Unique_batteries`**| Oct, Nov, Dec 2023 (3 CSVs) | Unique physical battery packs exchanged | 92 days $\times$ 34 stations |
+| **`PI_3_Battery_customers`**| Oct, Nov, Dec 2023 (3 CSVs) | Unique riders served per station per day | 92 days $\times$ 34 stations |
+| **`VDF1_SOC_Swapping`** | Excel workbook | Monthly average battery State of Charge at arrival | 34 stations $\times$ 3 months |
+| **`VDF4_Swap_completion`** | Excel workbook | Average swap completion time in minutes | 34 stations $\times$ 3 months |
+| **`VDF8_Distance_stations`**| Excel workbook | Road distance in meters between stations and hub | 34 station rows |
+| **`VDF9_Activated_compart`**| Excel workbook | Active charging bays/doors per swapping cabinet | 34 station rows |
+| **`VEF1_Disruptions`** | Excel workbook | Monthly station operational disruptions/outages | 34 stations $\times$ 3 months |
+| **`Table D.1_Vulnerability`**| Excel workbook | Multi-factor station vulnerability index scores | 34 stations $\times$ 3 months |
 
 ---
 
-## 4. Anonymization & Privacy Compliance
+## 4. Raw Data Quality Audit (Baseline Inspection)
 
-To adhere to strict academic ethics and Rwandan Law $N^{\circ} 058/2021$ on the Protection of Personal Data and Privacy:
-1. **Full Names:** Replaced with synthetic identifiers (`Customer_1001` through `Customer_1094`).
-2. **Phone Numbers:** Masked using standard telecom anonymization (`+250788***XX`).
-3. **National IDs:** Completely excluded from the raw transmission feed.
+> **IMPORTANT:** In strict compliance with Phase II guidelines, **no raw file has been modified in `data/raw/`**. All quality findings below are documented as the Phase IV ETL cleaning and transformation checklist:
 
----
-
-## 5. Raw Data Quality Audit (Baseline Inspection)
-
-> **IMPORTANT:** In strict compliance with Phase II guidelines, **no data has been cleaned or modified** in `data/raw/raw_battery_swaps.csv`. The file is preserved exactly as captured. The identified quality issues below form the mandatory Phase IV cleaning checklist.
-
-| Issue Category | Exact Count | Impact / Observation | Phase IV Cleaning Strategy |
+| Quality Characteristic | Exact Count / Finding | Impact & Observation | Phase IV ETL Transformation |
 | :--- | :---: | :--- | :--- |
-| **Duplicate Rows** | **14 rows** | Exact full-row duplicates caused by network retry sync from offline station buffers. | Remove duplicates using SQL `ROWID` deduplication before insertion into relational tables. |
-| **Missing Swap Timestamps** | **16 records** | `swap_time` is blank/null due to temporary terminal clock synchronization faults. | Impute missing timestamps using preceding audit log or station batch start time (`SYSDATE` fallback). |
-| **Missing Inspection Notes** | **28 records** | `inspection_notes` left blank when attendants selected standard passing presets. | Default blank notes to `'Standard inspection passed - no remarks recorded'`. |
-| **Numeric Fees Stored as Text** | **550 records** | Appended currency suffix `' RWF'` (e.g. `'2475 RWF'`). | Strip `' RWF'` using `REGEXP_REPLACE` or `REPLACE` and cast to `NUMBER(10,2)`. |
-| **Energy Consumed Stored as Text** | **550 records** | Appended unit `' kWh'` (e.g. `'2.75 kWh'`). | Strip `' kWh'` using `SUBSTR`/`REPLACE` and convert to `NUMBER(6,2)`. |
-| **District Inconsistent Variations** | **12 spellings** | 3 true districts represented with 12 distinct string variations: `'Gasabo'` (56), `'gasabo'` (49), `'GASABO'` (64), `'Gasabo District'` (58); `'Kicukiro'` (58), `'kicukiro'` (62), `'KICUKIRO'` (45), `'Kicukiro '` (56); `'Nyarugenge'` (26), `'nyarugenge'` (26), `'NYARUGENGE'` (26), `'Nyarugenge Hub'` (24). | Cleanse via `UPPER(TRIM(...))` and map to standard foreign key lookup table `STATIONS`. |
+| **Denormalized Wide Matrix Layout** | **34 column repeating groups** | Each CSV row contains 34 separate station columns for each single date (violates 1NF). | Unpivot (melt) the 34 station columns into 3,128 atomic relational rows: `(station_id, operation_date, throughput)`. |
+| **Non-Standard CSV Delimiter** | **9 CSV files** | Fields are delimited by semicolons (`;`) rather than standard commas. | Configured Python CSV reader and Oracle external tables with `DELIMITER ';'` parameter. |
+| **Decimal Representation for Counts** | **9,384 data cells** | Integer counts are stored as floating point strings (e.g. `19.0`, `44.0`, `3.0`). | Cast floats to `int` and insert as Oracle `NUMBER(5)` integer columns. |
+| **Embedded Formula Strings in Excel** | **14 workbooks** | Scaled columns contain raw Excel formula text (e.g. `=(B$38-B2)/(B$38-D$37)`). | Extracted raw metric values from data columns (`B`, `C`, `D`) rather than dependent formula columns. |
+| **Station Code Header Variations** | **34 headers** | Stations represented as alphanumeric codes (`BS007`..`BS290`) without descriptive names. | Mapped station codes to primary key `station_id` and assigned canonical names (`VoltSwap Station BS007`). |
+| **Null / Zero Charging Duration** | **2 stations in Nov/Dec** | Station `BS016` has 0 recorded charging duration in November/December due to depot battery rotation. | Handled via `NVL` / default fallback to network average charging duration (28.4 minutes). |

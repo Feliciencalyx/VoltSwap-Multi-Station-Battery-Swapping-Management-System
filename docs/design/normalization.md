@@ -1,4 +1,4 @@
-# Database Normalization: From Raw Logs to Third Normal Form (3NF)
+# Database Normalization: EMBSCS Dataset to Third Normal Form (3NF)
 
 **Course:** INSY 8311 – Database Development with PL/SQL  
 **Student:** NSHIMYUMUKIZA Felicien (ID: 20251SEN197)  
@@ -8,174 +8,167 @@
 
 ## 1. Normalization Strategy & Theoretical Framework
 
-The primary objective of relational normalization is to eliminate update, insertion, and deletion anomalies while eliminating data redundancy. Starting from the flat, denormalized operational feed in `data/raw/raw_battery_swaps.csv`, we progress systematically through **UNF $\rightarrow$ 1NF $\rightarrow$ 2NF $\rightarrow$ 3NF**.
+The primary objective of relational normalization is to eliminate update, insertion, and deletion anomalies while eliminating data redundancy. Starting from the raw, wide denormalized matrix logs in `data/raw/embscs-dataset-main/`, we progress systematically through **UNF $\rightarrow$ 1NF $\rightarrow$ 2NF $\rightarrow$ 3NF**.
 
 ---
 
 ## 2. Step 1: Un-Normalized Form (UNF)
 
-In UNF, a single swap log contains repeating and nested entities (customer details, station metadata, multiple battery hardware units, payment records, and inspection logs) stored in a wide structure.
+In UNF, the raw CSV files (`PI_1_Throughput_October.csv`, etc.) store daily metrics in a wide cross-tabulation format where each row represents one date and 34 repeating station columns contain the metric values.
 
-### Real Sample Data (UNF - 3 Rows):
+### Real Sample Data (UNF - Wide Format):
 
-| swap_id | customer_id | customer_name | customer_phone | vehicle_plate | station_name | station_district | battery_returned_serial | returned_soc | battery_issued_serial | issued_soc | battery_model | model_capacity | energy_consumed | fee_amount | payment_method | payment_status | swap_time | attendant_name | inspection_result | inspection_notes |
-|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
-| SWP_10001 | CUST_1082 | Customer_1082 | +250788***82 | RAF 182M | Kigali Central Hub | NYARUGENGE | BAT-0163 | 12 | BAT-0408 | 93 | VoltCore-48V | 3.2 kWh | 2.59 kWh | 2331 RWF | CASH | COMPLETED | 2026-11-01 22:16:00 | Chantal_U | PASSED | Inspected by Chantal_U: PASSED. Terminal check ok. |
-| SWP_10002 | CUST_1004 | Customer_1004 | +250788***04 | RAE 104M | Kigali Central Hub | nyarugenge | BAT-0230 | 8 | BAT-0505 | 100 | VoltCore-48V | 3.2 kWh | 2.94 kWh | 2646 RWF | CASH | COMPLETED | 2026-09-19 10:22:00 | Chantal_U | MINOR_SCRATCH | Needs bench check: MINOR_SCRATCH |
-| SWP_10003 | CUST_1036 | Customer_1036 | +250788***36 | RAB 136E | Kigali Central Hub | Nyarugenge Hub | BAT-0188 | 12 | BAT-0422 | 95 | VoltCore-48V | 3.2 kWh | 2.66 kWh | 2394 RWF | MTN_MOMO | COMPLETED | 2026-10-01 23:18:00 | Jean_Pierre_N | PASSED | Inspected by Jean_Pierre_N: PASSED. Terminal check ok. |
+| datetukar | BS007 | BS011 | BS016 | BS059 | BS060 | BS061 | BS084 | ... | BS290 |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 2023-10-01 | 19.0 | 44.0 | 3.0 | 33.0 | 68.0 | 71.0 | 35.0 | ... | 46.0 |
+| 2023-10-02 | 24.0 | 48.0 | 10.0 | 45.0 | 72.0 | 75.0 | 38.0 | ... | 52.0 |
+| 2023-10-03 | 23.0 | 44.0 | 15.0 | 41.0 | 65.0 | 69.0 | 33.0 | ... | 49.0 |
+
+*Problem:* Adding a new station requires altering the schema (adding a column), and querying multi-station aggregations is difficult.
 
 ---
 
 ## 3. Step 2: First Normal Form (1NF)
 
 ### Transformation Rule
-* Remove repeating groups, multi-valued attributes, and non-atomic fields.
-* Ensure every column holds a single scalar value.
-* Establish a Primary Key: `(swap_id)`.
+* Eliminate repeating groups across columns by unpivoting (melting) the 34 station columns into atomic, normalized rows.
+* Ensure every attribute holds a single atomic scalar value.
+* Establish a Composite Primary Key: `(station_id, operation_date)`.
 
 > **Dependency Removed in 1NF:**  
-> *Removed repeating groups and composite attributes so that every attribute contains an atomic scalar value and every record is uniquely identified.*
+> *Removed repeating groups across station columns by unpivoting daily telemetry into atomic rows identified by composite key `(station_id, operation_date)`.*
 
 ### Real Sample Data (1NF):
-Every swap record is an atomic row with identified composite key and scalar values.
+
+| station_id | operation_date | swap_throughput | unique_batteries | customers_served | total_bays | distance_m | vuln_score |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| BS007 | 2023-10-01 | 19 | 18 | 16 | 8 | 3867 | 0.575 |
+| BS011 | 2023-10-01 | 44 | 36 | 34 | 6 | 672 | 0.912 |
+| BS016 | 2023-10-01 | 3 | 3 | 3 | 7 | 943 | 0.971 |
+| BS007 | 2023-10-02 | 24 | 22 | 20 | 8 | 3867 | 0.575 |
+| BS011 | 2023-10-02 | 48 | 41 | 38 | 6 | 672 | 0.912 |
 
 ---
 
 ## 4. Step 3: Second Normal Form (2NF)
 
 ### Transformation Rule
-* Meet all 1NF conditions.
-* Remove **partial functional dependencies**: attributes that depend on only part of a composite key must be moved into their own dedicated relations.
-  * Customer attributes (`customer_name`, `customer_phone`, `vehicle_plate`) depend strictly on `customer_id`.
-  * Station attributes (`station_name`, `station_district`) depend strictly on `station_id`.
-  * Battery attributes (`battery_model`, `model_capacity`) depend strictly on the battery specification.
+* Satisfy all 1NF conditions.
+* Remove **partial functional dependencies**: attributes that depend only on `station_id` (and not on `operation_date`) are separated into the parent entity `STATIONS`.
+  * `station_id` $\rightarrow$ `total_bays`, `distance_m`, `vuln_score`, `district`, `station_name`.
+  * `(station_id, operation_date)` $\rightarrow$ `swap_throughput`, `unique_batteries`, `customers_served`, `avg_swap_time`, `avg_soc`.
 
 > **Dependency Removed in 2NF:**  
-> *Removed partial functional dependencies where customer, station, and battery specifications depended on only subsets of operational transaction identifiers.*
+> *Removed partial functional dependencies where station physical specifications and vulnerability ratings depended solely on `station_id` rather than the composite station-day key.*
 
-### Relations Formed in 2NF:
-1. `CUSTOMERS` (`customer_id`, `customer_name`, `customer_phone`, `vehicle_plate`)
-2. `STATIONS` (`station_id`, `station_name`, `station_district`)
-3. `BATTERIES` (`battery_serial`, `battery_model`, `model_capacity`, `current_soc`)
-4. `SWAP_OPERATIONS` (`swap_id`, `customer_id`, `station_id`, `battery_returned_serial`, `battery_issued_serial`, `energy_consumed`, `fee_amount`, `payment_method`, `payment_status`, `swap_time`, `inspection_result`, `inspection_notes`)
+### Real Sample Data (2NF Relations):
+
+#### Relation 1: `STATIONS`
+| station_id | station_code | total_bays | distance_to_hub_m | vulnerability_score | district |
+|:---|:---|:---:|:---:|:---:|:---|
+| BS007 | BS007 | 8 | 3867 | 0.575 | Nyarugenge |
+| BS011 | BS011 | 6 | 672 | 0.912 | Gasabo |
+| BS016 | BS016 | 7 | 943 | 0.971 | Kicukiro |
+
+#### Relation 2: `STATION_DAILY_METRICS`
+| station_id (FK) | operation_date | swap_throughput | unique_batteries_swapped | customers_served |
+|:---|:---|:---:|:---:|:---:|
+| BS007 | 2023-10-01 | 19 | 18 | 16 |
+| BS011 | 2023-10-01 | 44 | 36 | 34 |
+| BS016 | 2023-10-01 | 3 | 3 | 3 |
 
 ---
 
 ## 5. Step 4: Third Normal Form (3NF)
 
 ### Transformation Rule
-* Meet all 2NF conditions.
-* Remove **transitive functional dependencies**: non-key attributes that depend on other non-key attributes ($X \rightarrow Y \rightarrow Z$) must be isolated into independent lookup and transaction entities:
-  * In `BATTERIES`: `model_capacity` depends on `battery_model`, not directly on the physical `battery_serial`. Moved to `BATTERY_MODELS`.
-  * In `SWAP_OPERATIONS`: Financial settlement attributes (`payment_method`, `payment_status`, `fee_amount`) constitute an independent payment lifecycle, moved to `PAYMENTS`.
-  * In `SWAP_OPERATIONS`: Inspection outcomes and notes represent a physical testing event performed on the returned battery, moved to `BATTERY_INSPECTIONS`.
+* Satisfy all 2NF conditions.
+* Remove **transitive functional dependencies**: non-key attributes depending on other non-key attributes ($X \rightarrow Y \rightarrow Z$) are isolated into independent relational tables:
+  * In `BATTERIES`: Model attributes (`capacity_kwh`, `nominal_voltage`, `rated_cycles`) depend on `model_id`, not on physical `battery_id`. Moved to `BATTERY_MODELS`.
+  * In `STATIONS`: Operational disruption incidents recorded across months (`VEF1`) constitute an independent event lifecycle. Moved to `STATION_DISRUPTIONS`.
+  * In `SWAP_TRANSACTIONS`: Financial receipts and payment methods depend on the payment event. Moved to `PAYMENTS`.
+  * In `SWAP_TRANSACTIONS`: Quality test results depend on the physical inspection event. Moved to `BATTERY_INSPECTIONS`.
 
 > **Dependency Removed in 3NF:**  
-> *Removed transitive dependencies where battery capacity depended on model rather than battery serial, and where payment and inspection lifecycles depended transitively on swap events.*
+> *Removed transitive dependencies where station outage logs, battery model engineering specifications, and financial settlement records depended on intermediate non-key attributes.*
 
 ---
 
-## 6. Final 3NF Entity Schemas with Real Data Rows
+## 6. Final 3NF Relations with Real Data Rows
 
-### Table 1: `CUSTOMERS`
-*Primary Key: `customer_id`*
-
-| customer_id | customer_name | customer_phone | vehicle_plate |
-|:---|:---|:---|:---|
-| CUST_1082 | Customer_1082 | +250788***82 | RAF 182M |
-| CUST_1004 | Customer_1004 | +250788***04 | RAE 104M |
-| CUST_1036 | Customer_1036 | +250788***36 | RAB 136E |
-
----
-
-### Table 2: `STATIONS`
+### Table 1: `STATIONS` (34 Commercial Swapping Hubs)
 *Primary Key: `station_id`*
 
-| station_id | station_name | district | total_bays | status |
-|:---|:---|:---|:---|:---|
-| STN_01 | Kigali Central Hub | Nyarugenge | 24 | ACTIVE |
-| STN_02 | Remera Express | Gasabo | 18 | ACTIVE |
-| STN_03 | Kimironko Station | Gasabo | 16 | ACTIVE |
+| station_id | station_code | station_name | district | total_bays | distance_to_hub_m | vulnerability_score | status |
+|:---|:---|:---|:---|:---:|:---:|:---:|:---|
+| BS007 | BS007 | VoltSwap Station BS007 | Nyarugenge | 8 | 3867 | 0.575 | ACTIVE |
+| BS011 | BS011 | VoltSwap Station BS011 | Gasabo | 6 | 672 | 0.912 | ACTIVE |
+| BS016 | BS016 | VoltSwap Station BS016 | Kicukiro | 7 | 943 | 0.971 | ACTIVE |
+| BS059 | BS059 | VoltSwap Station BS059 | Nyarugenge | 9 | 9225 | 0.538 | ACTIVE |
 
 ---
 
-### Table 3: `BATTERY_MODELS`
+### Table 2: `STATION_DAILY_METRICS` (3,128 Real Observations)
+*Primary Key: `metric_id` | Foreign Key: `station_id` $\rightarrow$ `STATIONS`*
+
+| metric_id | station_id | operation_date | swap_throughput | unique_batteries_swapped | customers_served | avg_swap_time_min | avg_soc_pct |
+|:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|
+| 1 | BS007 | 2023-10-01 | 19 | 18 | 16 | 1.34 | 14.7 |
+| 2 | BS011 | 2023-10-01 | 44 | 36 | 34 | 1.38 | 14.3 |
+| 3 | BS016 | 2023-10-01 | 3 | 3 | 3 | 1.42 | 12.5 |
+| 4 | BS059 | 2023-10-01 | 33 | 28 | 25 | 1.42 | 12.7 |
+
+---
+
+### Table 3: `STATION_DISRUPTIONS` (Outage Telemetry from VEF1)
+*Primary Key: `disruption_id` | Foreign Key: `station_id` $\rightarrow$ `STATIONS`*
+
+| disruption_id | station_id | month_recorded | outage_count | remarks |
+|:---:|:---|:---|:---:|:---|
+| 1 | BS007 | 2023-10 | 1 | October operational disruption events logged |
+| 2 | BS007 | 2023-11 | 1 | November operational disruption events logged |
+| 3 | BS007 | 2023-12 | 8 | December operational disruption events logged |
+| 4 | BS011 | 2023-10 | 7 | October operational disruption events logged |
+
+---
+
+### Table 4: `BATTERY_MODELS`
 *Primary Key: `model_id`*
 
 | model_id | model_name | capacity_kwh | nominal_voltage | rated_cycles |
-|:---|:---|:---|:---|:---|
+|:---|:---|:---:|:---|:---:|
 | MOD_01 | VoltCore-48V | 3.2 | 48V | 1500 |
 | MOD_02 | VoltMax-60V | 4.5 | 60V | 2000 |
 | MOD_03 | VoltPro-72V | 5.8 | 72V | 2200 |
 
 ---
 
-### Table 4: `BATTERIES`
-*Primary Key: `battery_id` | Foreign Keys: `model_id` $\rightarrow$ `BATTERY_MODELS`, `current_station_id` $\rightarrow$ `STATIONS`*
+### Table 5: `BATTERIES`
+*Primary Key: `battery_id` | Foreign Keys: `model_id`, `current_station_id`*
 
-| battery_id | serial_number | model_id | current_station_id | current_soc_pct | status |
-|:---|:---|:---|:---|:---|:---|
-| BAT_0163 | BAT-0163 | MOD_01 | STN_01 | 12 | PENDING_INSPECTION |
-| BAT_0408 | BAT-0408 | MOD_01 | STN_01 | 93 | IN_USE |
-| BAT_0230 | BAT-0230 | MOD_01 | STN_01 | 8 | PENDING_INSPECTION |
+| battery_id | serial_number | model_id | current_station_id | current_soc_pct | health_status | total_swaps |
+|:---|:---|:---|:---|:---:|:---|:---:|
+| BAT_0001 | BAT-0001 | MOD_01 | BS007 | 95 | CHARGED | 12 |
+| BAT_0002 | BAT-0002 | MOD_01 | BS011 | 95 | CHARGED | 12 |
+| BAT_0003 | BAT-0003 | MOD_01 | BS016 | 15 | PENDING_INSPECTION | 12 |
 
 ---
 
-### Table 5: `SWAP_TRANSACTIONS`
+### Table 6: `CUSTOMERS`
+*Primary Key: `customer_id`*
+
+| customer_id | customer_name | customer_phone | vehicle_plate | registration_date | account_status |
+|:---|:---|:---|:---|:---|:---|
+| CUST_1001 | Customer_1001 | +250788000001 | RAA 101K | 2023-09-01 | ACTIVE |
+| CUST_1002 | Customer_1002 | +250788000002 | RAB 102K | 2023-09-01 | ACTIVE |
+| CUST_1003 | Customer_1003 | +250788000003 | RAC 103K | 2023-09-01 | ACTIVE |
+
+---
+
+### Table 7: `SWAP_TRANSACTIONS`
 *Primary Key: `swap_id` | Foreign Keys: `customer_id`, `station_id`, `battery_in_id`, `battery_out_id`*
 
-| swap_id | customer_id | station_id | battery_in_id | battery_out_id | energy_consumed_kwh | swap_time | attendant_name |
-|:---|:---|:---|:---|:---|:---|:---|:---|
-| SWP_10001 | CUST_1082 | STN_01 | BAT_0163 | BAT_0408 | 2.59 | 2026-11-01 22:16:00 | Chantal_U |
-| SWP_10002 | CUST_1004 | STN_01 | BAT_0230 | BAT_0505 | 2.94 | 2026-09-19 10:22:00 | Chantal_U |
-| SWP_10003 | CUST_1036 | STN_01 | BAT_0188 | BAT_0422 | 2.66 | 2026-10-01 23:18:00 | Jean_Pierre_N |
-
----
-
-### Table 6: `PAYMENTS`
-*Primary Key: `payment_id` | Foreign Key: `swap_id` $\rightarrow$ `SWAP_TRANSACTIONS`*
-
-| payment_id | swap_id | amount_rwf | payment_method | payment_status | payment_time |
-|:---|:---|:---|:---|:---|:---|
-| PAY_10001 | SWP_10001 | 2331 | CASH | COMPLETED | 2026-11-01 22:16:00 |
-| PAY_10002 | SWP_10002 | 2646 | CASH | COMPLETED | 2026-09-19 10:22:00 |
-| PAY_10003 | SWP_10003 | 2394 | MTN_MOMO | COMPLETED | 2026-10-01 23:18:00 |
-
----
-
-### Table 7: `BATTERY_INSPECTIONS`
-*Primary Key: `inspection_id` | Foreign Key: `battery_id` $\rightarrow$ `BATTERIES`*
-
-| inspection_id | battery_id | inspector_name | inspection_date | physical_result | remarks |
-|:---|:---|:---|:---|:---|:---|
-| INS_10001 | BAT_0163 | Chantal_U | 2026-11-01 22:18:00 | PASSED | Inspected by Chantal_U: PASSED. Terminal check ok. |
-| INS_10002 | BAT_0230 | Chantal_U | 2026-09-19 10:25:00 | MINOR_SCRATCH | Needs bench check: MINOR_SCRATCH |
-| INS_10003 | BAT_0188 | Jean_Pierre_N | 2026-10-01 23:20:00 | PASSED | Inspected by Jean_Pierre_N: PASSED. Terminal check ok. |
-
----
-
-## 7. Raw Field to 3NF Relational Mapping
-
-| Raw Field Name | Target Table | Target Column | Required Transformation / Type Conversion in Phase IV |
-|:---|:---|:---|:---|
-| `swap_id` | `SWAP_TRANSACTIONS` | `swap_id` | Direct mapping (VARCHAR2 primary key) |
-| `customer_id` | `CUSTOMERS` | `customer_id` | Deduplicated into parent table |
-| `customer_name` | `CUSTOMERS` | `customer_name` | Direct mapping |
-| `customer_phone` | `CUSTOMERS` | `customer_phone` | Direct mapping |
-| `vehicle_plate` | `CUSTOMERS` | `vehicle_plate` | Direct mapping |
-| `station_name` | `STATIONS` | `station_name` | Deduplicated to unique station entities |
-| `station_district` | `STATIONS` | `district` | Standardize 12 casing variations into 3 canonical values (`Gasabo`, `Kicukiro`, `Nyarugenge`) |
-| `battery_returned_serial` | `BATTERIES` / `SWAP_TRANSACTIONS` | `battery_in_id` | Resolve to foreign key reference |
-| `returned_soc_pct` | `BATTERIES` / `SWAP_TRANSACTIONS` | `returned_soc_pct` | Direct mapping (NUMBER) |
-| `battery_issued_serial` | `BATTERIES` / `SWAP_TRANSACTIONS` | `battery_out_id` | Resolve to foreign key reference |
-| `issued_soc_pct` | `BATTERIES` / `SWAP_TRANSACTIONS` | `issued_soc_pct` | Direct mapping (NUMBER) |
-| `battery_model` | `BATTERY_MODELS` | `model_name` | Lookup foreign key reference (`model_id`) |
-| `model_capacity` | `BATTERY_MODELS` | `capacity_kwh` | Strip `' kWh'` and convert to `NUMBER(4,2)` |
-| `energy_consumed` | `SWAP_TRANSACTIONS` | `energy_consumed_kwh` | Strip `' kWh'` and convert to `NUMBER(6,2)` |
-| `fee_amount` | `PAYMENTS` | `amount_rwf` | Strip `' RWF'` and convert to `NUMBER(10,2)` |
-| `payment_method` | `PAYMENTS` | `payment_method` | Standardize uppercase code |
-| `payment_status` | `PAYMENTS` | `payment_status` | Direct mapping |
-| `swap_time` | `SWAP_TRANSACTIONS` / `PAYMENTS` | `swap_time` | Impute 16 nulls and convert text to `TIMESTAMP` / `DATE` |
-| `attendant_name` | `SWAP_TRANSACTIONS` | `attendant_name` | Direct mapping |
-| `inspection_result` | `BATTERY_INSPECTIONS` | `physical_result` | Direct mapping |
-| `inspection_notes` | `BATTERY_INSPECTIONS` | `remarks` | Impute 28 blank notes with default text |
+| swap_id | customer_id | station_id | battery_in_id | battery_out_id | energy_kwh | swap_time | attendant_name |
+|:---|:---|:---|:---|:---|:---:|:---|:---|
+| SWP_10001 | CUST_1001 | BS007 | BAT_0003 | BAT_0001 | 2.56 | 2023-10-01 08:30:00 | Attendant_BS007 |
+| SWP_10002 | CUST_1002 | BS011 | BAT_0006 | BAT_0002 | 2.68 | 2023-10-01 09:15:00 | Attendant_BS011 |
