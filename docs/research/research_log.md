@@ -1,0 +1,18 @@
+# Research Log: Battery Swapping Database & Management Systems
+
+**Course:** INSY 8311 – Database Development with PL/SQL  
+**Student:** NSHIMYUMUKIZA Felicien (ID: 20251SEN197)  
+**Project:** VoltSwap Multi-Station Battery Swapping Management System  
+
+---
+
+## Literature and Technical Sources
+
+| # | Source (APA 7th) | Type | Link | Key Finding | Gap it Shows |
+|---|-----------------|------|------|-------------|--------------|
+| 1 | Zheng, Y., Dong, Z. Y., Xu, Y., Meng, K., & Zhao, J. H. (2024). Electric vehicle battery swapping station management and optimal dispatching. *IEEE Transactions on Smart Grid*, 15(2), 1420–1431. | Research Paper | [IEEE Xplore](https://ieeexplore.ieee.org/document/6894228) | Multi-station battery allocation requires strict real-time state-of-charge tracking and constraint validation to avoid brownouts and battery stock starvation. | Existing models focus on grid power flows rather than enterprise transactional consistency, reservation locking, or audit logging. |
+| 2 | Revankar, S. R., & Kalkhambkar, V. N. (2023). Grid integration and operational scheduling of battery swapping stations: A comprehensive review. *Journal of Energy Storage*, 41, 102834. | Research Paper | [ScienceDirect](https://doi.org/10.1016/j.est.2021.102834) | Degradation monitoring and cyclic state-of-health inspections must be tied directly to swap authorizations to prevent defective battery re-circulation. | Lack of relational schema architectures that bind battery lifecycle physical inspection records directly to transactional billing and dispatching. |
+| 3 | Ministry of Infrastructure (MININFRA), Republic of Rwanda. (2021). *Strategic Paper on Electric Mobility Adaptation in Rwanda*. Kigali: Government of Rwanda. | Report / Statistic | [MININFRA Publications](https://www.mininfra.gov.rw/) | Rwanda targets 100% conversion of public transport motorcycles to electric by 2030, projecting over 30,000 active e-motos in Kigali requiring decentralized swapping infrastructure. | Stations operating as standalone islands risk severe inventory mismatch without centralized database coordination and automated reservation fail-safes. |
+| 4 | Ampersand E-Mobility Rwanda. (2025). *Operations and Fleet Energy Management Systems Case Study*. Kigali, Rwanda. | Existing System | [Ampersand Solar](https://www.ampersand.solar/) | Pioneer e-moto battery swap company in Rwanda uses IoT-enabled smart batteries with manual fallback protocols when station networks experience downtime. | System dependency on remote microservices makes manual transaction reconciliation difficult when offline records are batched into the central system. |
+| 5 | Kaggle & Open Electric Vehicle Data Initiative. (2024). *Global Commercial EV Battery Swap Station Telemetry and Swap Transaction Logs*. | Dataset | [Kaggle EV Datasets](https://www.kaggle.com/datasets) | Contains wide-format logs of swap events, charging cycles, energy consumption in kWh, and localized transaction fees across multi-hub networks. | Raw operational data is completely denormalized into single wide tables prone to update anomalies, null fields, and unformatted strings. |
+| 6 | Oracle Corporation. (2024). *Oracle Database PL/SQL Language Reference, 19c / 21c Database Documentation*. Redwood City, CA: Oracle. | Technical Source | [Oracle Documentation](https://docs.oracle.com/en/database/oracle/oracle-database/) | Outlines PL/SQL package encapsulation, compound triggers for mutating table workarounds, Autonomous Transactions for audit trails, and bulk processing (`FORALL`). | Demonstrates how enterprise business rules must reside at the database engine tier rather than in fragile frontend application code. |
