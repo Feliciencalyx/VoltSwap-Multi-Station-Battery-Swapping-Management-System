@@ -35,11 +35,16 @@ To architect and implement a robust Oracle relational database that coordinates 
 
 ---
 
-## 3. Data Source
-* **File Location:** `data/raw/raw_battery_swaps.csv` (Preserved raw and unedited)
-* **Dataset Size:** 550 records across 5 Kigali stations
-* **Dataset Card:** Detailed metadata and raw data quality audit in [`data/dataset_card.md`](data/dataset_card.md).
-* **Privacy Compliance:** Rider names anonymized (`Customer_1001`–`1094`) and phone numbers masked (`+250788***01`).
+## 3. Data Source & Quality Audit
+* **Raw File Location:** `data/raw/raw_battery_swaps.csv` (Preserved raw and unedited, 550 records)
+* **Dataset Card:** Full metadata and raw audit in [`data/dataset_card.md`](data/dataset_card.md).
+* **Quality Audit Counts (Cleaned in Phase IV):**
+  * 14 duplicate rows removed during ETL.
+  * 16 missing swap dates imputed.
+  * 28 blank inspection remarks standardized.
+  * 12 district spelling variations canonicalized into `Nyarugenge`, `Gasabo`, and `Kicukiro`.
+  * 550 text fees and energy values converted to numeric `NUMBER(10,2)` and `NUMBER(6,2)`.
+* **Privacy Compliance:** Personal data anonymized (`Customer_1001`–`1094`, `+250788***01`).
 
 ---
 
@@ -55,8 +60,8 @@ The modeled business process captures the complete lifecycle of a battery swap: 
 
 ---
 
-## 5. Planned 3NF Relational Tables
-Normalized into 7 relational entities (detailed in [`docs/design/normalization.md`](docs/design/normalization.md) and [`docs/design/data_dictionary.md`](docs/design/data_dictionary.md)):
+## 5. Normalized 3NF Database Architecture (Phase II & IV)
+Normalized into 7 relational entities (detailed in [`docs/design/normalization.md`](docs/design/normalization.md), [`docs/design/data_dictionary.md`](docs/design/data_dictionary.md), and [`docs/design/erd_guide.md`](docs/design/erd_guide.md)):
 1. `CUSTOMERS` – Rider identities, contacts, and vehicle registration plates.
 2. `STATIONS` – Physical hubs, district locations, and charging bays.
 3. `BATTERY_MODELS` – Technical catalog (capacity kWh, voltage, rated cycles).
@@ -67,37 +72,64 @@ Normalized into 7 relational entities (detailed in [`docs/design/normalization.m
 
 ---
 
-## 6. Planned PL/SQL Features
-* **Stored Procedures:** `process_battery_swap` executing atomic four-table updates within a transaction.
-* **Stored Functions:** `calculate_swap_fee` dynamically computing fees based on consumed kWh; `check_station_availability` returning ready battery counts.
-* **Packages & Cursors:** `PKG_VOLTSWAP_OPS` encapsulating daily station reconciliation reports.
-* **Business Triggers:**
-  * `TRG_PREVENT_UNINSPECTED_SWAP`: Blocks swap issuance if the battery has not passed mandatory technical inspection.
-  * `TRG_RESTRICT_PAYMENT_MUTATION`: Disallows unauthorized modification of settled financial records.
-* **Security & Auditing:** Autonomous transaction trigger logging security violations into `AUDIT_LOG`.
+## 6. Directory Structure & Execution Pipeline
+
+```
+your-project/
+├── README.md
+├── data/
+│   ├── raw/raw_battery_swaps.csv         # Raw uncleaned data
+│   └── dataset_card.md                   # Quality audit
+├── docs/
+│   ├── research/research_log.md          # 6 verified sources
+│   ├── proposal/proposal.md              # 2-page project proposal
+│   ├── presentation/presentation_slides.md # 12 slide deck
+│   ├── business_process/                 # BPMN explanation & guide
+│   └── design/                           # Normalization, ERD & dictionary
+├── database/
+│   ├── setup/                            # Phase III: 01_create_pdb to 05_verify
+│   ├── schema/                           # Phase IV: 01_tables, 02_insert, 03_validate
+│   ├── plsql/                            # Phase V: functions, procedures, package
+│   ├── audit/                            # Phase VI: audit table & triggers
+│   ├── tests/                            # Success & negative error test suites
+│   └── run_all.sql                       # Master deployment script
+└── innovation/
+    ├── app.py                            # Streamlit web console
+    └── README.md                         # Demonstration guide (8 Marks)
+```
 
 ---
 
-## 7. Innovation Layer (8 Marks)
-An interactive **Python Streamlit Attendant & Operations Console** connecting live to the Oracle PDB via `python-oracledb`. 
-* Real-time multi-station inventory monitoring.
-* One-click swap execution invoking PL/SQL procedures.
-* Live trigger safety verification.
-* Full documentation and run commands in [`innovation/README.md`](innovation/README.md).
+## 7. How to Run the Entire Database Suite
+
+### 1. Execute Setup in Oracle PDB (Phase III)
+Connect to SQL*Plus as `SYSDBA`:
+```sql
+@database/setup/01_create_pdb.sql;
+@database/setup/02_create_user.sql;
+@database/setup/03_tablespaces.sql;
+@database/setup/04_archive_log.sql;
+@database/setup/05_verify.sql;
+```
+
+### 2. Deploy Schema, PL/SQL Logic & Tests (Phases IV, V, VI)
+Connect as `felicien_admin@b_197_felicien_voltswap_db`:
+```sql
+CONNECT felicien_admin/felicien@localhost:1521/b_197_felicien_voltswap_db;
+@database/run_all.sql;
+```
+
+### 3. Launch the Innovation Layer (Phase VII - 8 Marks)
+In your terminal:
+```powershell
+pip install -r innovation/requirements.txt
+streamlit run innovation/app.py
+```
+Open `http://localhost:8501` to demonstrate live swap execution, inventory status, and trigger security alerts.
 
 ---
 
-## 8. Database Architecture & Setup Scripts (Phase III)
-Setup scripts located in `database/setup/`:
-* [`01_create_pdb.sql`](database/setup/01_create_pdb.sql) – Creates `b_197_felicien_voltswap_db`, opens it, and saves state.
-* [`02_create_user.sql`](database/setup/02_create_user.sql) – Creates `felicien_admin` with DBA role.
-* [`03_tablespaces.sql`](database/setup/03_tablespaces.sql) – Configures `voltswap_data` (100M/1G), `voltswap_idx` (50M/500M), and `voltswap_temp` (50M/500M).
-* [`04_archive_log.sql`](database/setup/04_archive_log.sql) – Architectural explanation of CDB vs PDB scope and enabling steps.
-* [`05_verify.sql`](database/setup/05_verify.sql) – Verification queries for PDB, users, storage, and archive mode.
-
----
-
-## 9. References (APA 7th)
+## 8. References (APA 7th)
 * Ministry of Infrastructure (MININFRA), Republic of Rwanda. (2021). *Strategic Paper on Electric Mobility Adaptation in Rwanda*. Kigali: Government of Rwanda.
 * Oracle Corporation. (2024). *Oracle Database PL/SQL Language Reference, 19c/21c*. Redwood City, CA: Oracle.
 * Revankar, S. R., & Kalkhambkar, V. N. (2023). Grid integration and operational scheduling of battery swapping stations: A comprehensive review. *Journal of Energy Storage*, 41, 102834.
